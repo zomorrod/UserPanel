@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Color Variables - Easy to customize */
+        :root {
+            --primary-dark-blue: #1e3a8a;
+            --primary-light-blue: #3b82f6;
+            --primary-light-gray: #f8fafc;
+            --primary-red: #dc2626;
+            --sidebar-width: 250px;
+        }
+
+        /* Custom Bootstrap color overrides */
+        .btn-primary { background-color: var(--primary-light-blue); border-color: var(--primary-light-blue); }
+        .btn-primary:hover { background-color: var(--primary-dark-blue); border-color: var(--primary-dark-blue); }
+        .btn-danger { background-color: var(--primary-red); border-color: var(--primary-red); }
+        .text-primary { color: var(--primary-light-blue) !important; }
+        .bg-primary { background-color: var(--primary-light-blue) !important; }
+        .bg-dark-blue { background-color: var(--primary-dark-blue) !important; }
+        .bg-light-gray { background-color: var(--primary-light-gray) !important; }
+
+        /* Intro Screen */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7)),
+                        url('');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+            text-align: center;
+        }
+
+        #intro-screen h1 { font-size: 3rem; margin-bottom: 1rem; }
+        #intro-screen .spinner-border { margin-top: 2rem; }
+
+        /* Sidebar */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: -250px;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: var(--primary-dark-blue);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        #sidebar.show { left: 0; }
+        #sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+        #sidebar .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
+        #sidebar .nav-link.active { color: white; background-color: var(--primary-light-blue); }
+
+        /* Main content */
+        #main-content {
+            margin-left: 0;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        #main-content.sidebar-open { margin-left: var(--sidebar-width); }
+
+        /* Top navbar */
+        .top-navbar { 
+            background-color: var(--primary-light-blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Dashboard cards */
+        .dashboard-card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .dashboard-card:hover { transform: translateY(-5px); }
+        .dashboard-card .card-body { padding: 2rem; text-align: center; }
+        .dashboard-card i { font-size: 3rem; margin-bottom: 1rem; }
+
+        /* Form styling */
+        .form-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        /* Wizard steps */
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        .step-indicator .step {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            background-color: var(--primary-light-gray);
+            border-radius: 5px;
+            margin: 0 0.25rem;
+        }
+        .step-indicator .step.active { background-color: var(--primary-light-blue); color: white; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #main-content.sidebar-open { margin-left: 0; }
+            #sidebar { left: -100%; width: 100%; }
+            .form-container { margin: 1rem; padding: 1.5rem; }
+            .dashboard-card .card-body { padding: 1.5rem; }
+        }
+
+        /* Page-specific styles */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body class="bg-light-gray">
+    <!-- Intro Screen -->
+    <div id="intro-screen">
+        <div>
+            <h1>Welcome to Customer Panel</h1>
+            <p class="lead">Initializing your workspace...</p>
+            <div class="spinner-border" role="status"></div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-3">
+            <h4 class="text-white">Customer Panel</h4>
+            <hr class="text-white-50">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showPage('dashboard')">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showPage('register-car')">
+                        <i class="fas fa-car me-2"></i>Register Car
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showPage('reports')">
+                        <i class="fas fa-chart-bar me-2"></i>Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showPage('booking')">
+                        <i class="fas fa-calendar-check me-2"></i>Booking
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showPage('iframe-page')">
+                        <i class="fas fa-external-link-alt me-2"></i>External Page
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg top-navbar">
+            <div class="container-fluid">
+                <button class="btn btn-outline-light me-3" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand text-white mb-0">Customer Panel</span>
+                <div class="ms-auto">
+                    <span class="text-white me-3">Welcome, Customer</span>
+                    <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Login Page -->
+        <div id="login-page" class="page active">
+            <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+                <div class="form-container">
+                    <div class="text-center mb-4">
+                        <!--<i class="fas fa-lock text-primary" style="font-size: 3rem;"></i>-->
+						<img src="loginlogo.png" />
+                        <h3 class="mt-3">Customer Login</h3>
+                    </div>
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Login</button>
+                        <div class="text-center">
+                            <a href="#" onclick="showPage('forgot-password')" class="text-decoration-none">Forgot Password?</a>
+                            <span class="mx-2">|</span>
+                            <a href="#" onclick="showPage('register')" class="text-decoration-none">Register</a>
+                            <br><br>
+                            <a href="#" onclick="showPage('login-sms')" class="text-decoration-none">Login with SMS Code</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forgot Password Page -->
+        <div id="forgot-password-page" class="page">
+            <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+                <div class="form-container">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-key text-primary" style="font-size: 3rem;"></i>
+                        <h3 class="mt-3">Forgot Password</h3>
+                    </div>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Send Reset Link</button>
+                        <div class="text-center">
+                            <a href="#" onclick="showPage('login')" class="text-decoration-none">Back to Login</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div id="register-page" class="page">
+            <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+                <div class="form-container">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-plus text-primary" style="font-size: 3rem;"></i>
+                        <h3 class="mt-3">Register</h3>
+                    </div>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mb-3">Register</button>
+                        <div class="text-center">
+                            <a href="#" onclick="showPage('login')" class="text-decoration-none">Already have an account? Login</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMS Login Page -->
+        <div id="login-sms-page" class="page">
+            <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+                <div class="form-container">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-mobile-alt text-primary" style="font-size: 3rem;"></i>
+                        <h3 class="mt-3">SMS Login</h3>
+                    </div>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" required>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 mb-3" onclick="sendSMSCode()">Send SMS Code</button>
+                        <div id="sms-code-section" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">SMS Code</label>
+                                <input type="text" class="form-control" maxlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mb-3">Verify & Login</button>
+                        </div>
+                        <div class="text-center">
+                            <a href="#" onclick="showPage('login')" class="text-decoration-none">Back to Login</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page">
+            <div class="container-fluid p-4">
+                <h2 class="mb-4">Dashboard</h2>
+                <div class="row g-4">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card dashboard-card bg-primary text-white">
+                            <div class="card-body">
+                                <i class="fas fa-users"></i>
+                                <h4>1,234</h4>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card dashboard-card text-white" style="background-color: var(--primary-red);">
+                            <div class="card-body">
+                                <i class="fas fa-car"></i>
+                                <h4>567</h4>
+                                <p>Registered Cars</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card dashboard-card bg-dark-blue text-white">
+                            <div class="card-body">
+                                <i class="fas fa-calendar-check"></i>
+                                <h4>89</h4>
+                                <p>Active Bookings</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card dashboard-card bg-success text-white">
+                            <div class="card-body">
+                                <i class="fas fa-dollar-sign"></i>
+                                <h4>$12,345</h4>
+                                <p>Total Revenue</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Recent Activity</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>Recent activities and notifications will be displayed here...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Car Page -->
+        <div id="register-car-page" class="page">
+            <div class="container-fluid p-4">
+                <h2 class="mb-4">Register Car</h2>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-body">
+                                <form>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Brand</label>
+                                            <select class="form-select" required>
+                                                <option value="">Select Brand</option>
+                                                <option value="toyota">Toyota</option>
+                                                <option value="honda">Honda</option>
+                                                <option value="ford">Ford</option>
+                                                <option value="bmw">BMW</option>
+                                                <option value="mercedes">Mercedes-Benz</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Model</label>
+                                            <input type="text" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">VIN</label>
+                                            <input type="text" class="form-control" maxlength="17" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Year</label>
+                                            <select class="form-select" required>
+                                                <option value="">Select Year</option>
+                                                <script>
+                                                    for(let year = 2024; year >= 1990; year--) {
+                                                        document.write(`<option value="${year}">${year}</option>`);
+                                                    }
+                                                </script>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Color</label>
+                                            <select class="form-select" required>
+                                                <option value="">Select Color</option>
+                                                <option value="black">Black</option>
+                                                <option value="white">White</option>
+                                                <option value="silver">Silver</option>
+                                                <option value="red">Red</option>
+                                                <option value="blue">Blue</option>
+                                                <option value="gray">Gray</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">Register Car</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="reports-page" class="page">
+            <div class="container-fluid p-4">
+                <h2 class="mb-4">Reports</h2>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>API Reports</h5>
+                                <button class="btn btn-primary btn-sm" onclick="loadReportData()">
+                                    <i class="fas fa-refresh me-1"></i>Refresh
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="report-content">
+                                    <div class="text-center">
+                                        <p>Click "Refresh" to load data from external API</p>
+                                    </div>
+                                </div>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Amount</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="report-table-body">
+                                            <!-- Data will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Page -->
+        <div id="booking-page" class="page">
+            <div class="container-fluid p-4">
+                <h2 class="mb-4">Booking - Repair Shop Reservation</h2>
+                <div class="row justify-content-center">
+                    <div class="col-md-10">
+                        <div class="card">
+                            <div class="card-body">
+                                <!-- Wizard Steps Indicator -->
+                                <div class="step-indicator">
+                                    <div class="step active" data-step="1">
+                                        <i class="fas fa-user"></i><br>Customer Info
+                                    </div>
+                                    <div class="step" data-step="2">
+                                        <i class="fas fa-car"></i><br>Vehicle Details
+                                    </div>
+                                    <div class="step" data-step="3">
+                                        <i class="fas fa-calendar"></i><br>Schedule
+                                    </div>
+                                    <div class="step" data-step="4">
+                                        <i class="fas fa-check"></i><br>Confirmation
+                                    </div>
+                                </div>
+
+                                <!-- Step 1: Customer Info -->
+                                <div class="wizard-step active" data-step="1">
+                                    <h4 class="mb-3">Customer Information</h4>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Full Name</label>
+                                            <input type="text" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Address</label>
+                                            <input type="text" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 2: Vehicle Details -->
+                                <div class="wizard-step" data-step="2">
+                                    <h4 class="mb-3">Vehicle Details</h4>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Vehicle Make</label>
+                                            <input type="text" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Vehicle Model</label>
+                                            <input type="text" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Year</label>
+                                            <input type="number" class="form-control" min="1990" max="2024">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">License Plate</label>
+                                            <input type="text" class="form-control">
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Service Required</label>
+                                            <textarea class="form-control" rows="3" placeholder="Describe the service needed"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 3: Schedule -->
+                                <div class="wizard-step" data-step="3">
+                                    <h4 class="mb-3">Schedule Appointment</h4>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Preferred Date</label>
+                                            <input type="date" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Preferred Time</label>
+                                            <select class="form-select" required>
+                                                <option value="">Select Time</option>
+                                                <option value="08:00">08:00 AM</option>
+                                                <option value="09:00">09:00 AM</option>
+                                                <option value="10:00">10:00 AM</option>
+                                                <option value="11:00">11:00 AM</option>
+                                                <option value="13:00">01:00 PM</option>
+                                                <option value="14:00">02:00 PM</option>
+                                                <option value="15:00">03:00 PM</option>
+                                                <option value="16:00">04:00 PM</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Service Type</label>
+                                            <select class="form-select" required>
+                                                <option value="">Select Service</option>
+                                                <option value="maintenance">Regular Maintenance</option>
+                                                <option value="repair">Repair Service</option>
+                                                <option value="inspection">Inspection</option>
+                                                <option value="emergency">Emergency Service</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Estimated Duration</label>
+                                            <select class="form-select">
+                                                <option value="1">1 Hour</option>
+                                                <option value="2">2 Hours</option>
+                                                <option value="4">Half Day (4 Hours)</option>
+                                                <option value="8">Full Day (8 Hours)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 4: Confirmation -->
+                                <div class="wizard-step" data-step="4">
+                                    <h4 class="mb-3">Confirmation</h4>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Please review your booking details below and confirm your appointment.
+                                    </div>
+                                    <div id="booking-summary">
+                                        <!-- Summary will be populated here -->
+                                    </div>
+                                </div>
+
+                                <!-- Navigation Buttons -->
+                                <div class="d-flex justify-content-between mt-4">
+                                    <button type="button" class="btn btn-secondary" id="prev-btn" onclick="prevStep()" style="display: none;">
+                                        <i class="fas fa-arrow-left me-1"></i>Previous
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="next-btn" onclick="nextStep()">
+                                        Next<i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-success" id="confirm-btn" onclick="confirmBooking()" style="display: none;">
+                                        <i class="fas fa-check me-1"></i>Confirm Booking
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IFrame Page -->
+        <div id="iframe-page" class="page">
+            <div class="container-fluid p-4">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h2 class="mb-3">External Page</h2>
+                        <div class="input-group mb-3">
+                            <input type="url" class="form-control" id="iframe-url" placeholder="Enter URL (e.g., https://example.com)" value="https://www.google.com">
+                            <button class="btn btn-primary" onclick="loadIframe()">Load Page</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card" style="height: 70vh;">
+                            <div class="card-body p-0">
+                                <iframe id="external-iframe" src="https://www.google.com" 
+                                        width="100%" height="100%" frameborder="0"
+                                        style="border-radius: 0.375rem;">
+                                </iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentStep = 1;
+        let sidebarOpen = false;
+        let currentPage = 'login';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show intro screen for 5 seconds
+            setTimeout(() => {
+                document.getElementById('intro-screen').style.display = 'none';
+            }, 5000);
+
+            // Initialize login form
+            document.getElementById('login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                login();
+            });
+        });
+
+        // Page navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Show selected page
+            const targetPage = document.getElementById(pageId + '-page');
+            if (targetPage) {
+                targetPage.classList.add('active');
+                currentPage = pageId;
+            }
+
+            // Update sidebar active state
+            document.querySelectorAll('#sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Handle sidebar visibility for auth pages
+            if (['login', 'register', 'forgot-password', 'login-sms'].includes(pageId)) {
+                document.getElementById('sidebar').classList.remove('show');
+                document.getElementById('main-content').classList.remove('sidebar-open');
+                sidebarOpen = false;
+            }
+        }
+
+        // Authentication functions
+        function login() {
+            // Simulate login process
+            showLoadingOverlay('Logging in...');
+            setTimeout(() => {
+                hideLoadingOverlay();
+                showPage('dashboard');
+                document.getElementById('sidebar').classList.add('show');
+                document.getElementById('main-content').classList.add('sidebar-open');
+                sidebarOpen = true;
+            }, 2000);
+        }
+
+        function logout() {
+            showLoadingOverlay('Logging out...');
+            setTimeout(() => {
+                hideLoadingOverlay();
+                showPage('login');
+                document.getElementById('sidebar').classList.remove('show');
+                document.getElementById('main-content').classList.remove('sidebar-open');
+                sidebarOpen = false;
+            }, 1000);
+        }
+
+        function sendSMSCode() {
+            document.getElementById('sms-code-section').style.display = 'block';
+            alert('SMS code sent! (This is a demo)');
+        }
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            
+            if (sidebarOpen) {
+                sidebar.classList.remove('show');
+                mainContent.classList.remove('sidebar-open');
+                sidebarOpen = false;
+            } else {
+                sidebar.classList.add('show');
+                mainContent.classList.add('sidebar-open');
+                sidebarOpen = true;
+            }
+        }
+
+        // Booking wizard functions
+        function nextStep() {
+            if (currentStep < 4) {
+                // Hide current step
+                document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+                
+                currentStep++;
+                
+                // Show next step
+                document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+                
+                updateWizardButtons();
+                
+                if (currentStep === 4) {
+                    generateBookingSummary();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                // Hide current step
+                document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+                
+                currentStep--;
+                
+                // Show previous step
+                document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+                
+                updateWizardButtons();
+            }
+        }
+
+        function updateWizardButtons() {
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const confirmBtn = document.getElementById('confirm-btn');
+            
+            prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
+            nextBtn.style.display = currentStep < 4 ? 'inline-block' : 'none';
+            confirmBtn.style.display = currentStep === 4 ? 'inline-block' : 'none';
+        }
+
+        function generateBookingSummary() {
+            const summary = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <p><strong>Name:</strong> John Doe<br>
+                        <strong>Phone:</strong> +1234567890<br>
+                        <strong>Email:</strong> john@example.com</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Vehicle Details</h6>
+                        <p><strong>Vehicle:</strong> Toyota Camry 2020<br>
+                        <strong>License:</strong> ABC123<br>
+                        <strong>Service:</strong> Regular Maintenance</p>
+                    </div>
+                    <div class="col-md-6 mt-3">
+                        <h6>Appointment Details</h6>
+                        <p><strong>Date:</strong> Tomorrow<br>
+                        <strong>Time:</strong> 10:00 AM<br>
+                        <strong>Duration:</strong> 2 Hours</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('booking-summary').innerHTML = summary;
+        }
+
+        function confirmBooking() {
+            showLoadingOverlay('Processing booking...');
+            setTimeout(() => {
+                hideLoadingOverlay();
+                alert('Booking confirmed successfully!');
+                // Reset wizard
+                currentStep = 1;
+                document.querySelectorAll('.wizard-step').forEach(step => step.classList.remove('active'));
+                document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+                document.querySelector('.wizard-step[data-step="1"]').classList.add('active');
+                document.querySelector('.step[data-step="1"]').classList.add('active');
+                updateWizardButtons();
+            }, 2000);
+        }
+
+        // Reports functions
+        function loadReportData() {
+            showLoadingOverlay('Loading report data...');
+            
+            // Simulate API call
+            setTimeout(() => {
+                const reportData = [
+                    { id: 1, date: '2024-06-01', status: 'Completed', amount: '$250.00' },
+                    { id: 2, date: '2024-06-02', status: 'Pending', amount: '$180.00' },
+                    { id: 3, date: '2024-06-03', status: 'In Progress', amount: '$320.00' },
+                    { id: 4, date: '2024-06-04', status: 'Completed', amount: '$450.00' },
+                    { id: 5, date: '2024-06-05', status: 'Cancelled', amount: '$0.00' }
+                ];
+                
+                const tableBody = document.getElementById('report-table-body');
+                tableBody.innerHTML = '';
+                
+                reportData.forEach(row => {
+                    const statusClass = row.status === 'Completed' ? 'success' : 
+                                      row.status === 'Pending' ? 'warning' : 
+                                      row.status === 'In Progress' ? 'info' : 'danger';
+                    
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td>${row.id}</td>
+                            <td>${row.date}</td>
+                            <td><span class="badge bg-${statusClass}">${row.status}</span></td>
+                            <td>${row.amount}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('report-content').innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Data loaded successfully from external API
+                    </div>
+                `;
+                
+                hideLoadingOverlay();
+            }, 1500);
+        }
+
+        // IFrame functions
+        function loadIframe() {
+            const url = document.getElementById('iframe-url').value;
+            const iframe = document.getElementById('external-iframe');
+            
+            if (url) {
+                showLoadingOverlay('Loading page...');
+                iframe.src = url;
+                
+                iframe.onload = function() {
+                    hideLoadingOverlay();
+                };
+                
+                // Hide loading after 3 seconds as fallback
+                setTimeout(() => {
+                    hideLoadingOverlay();
+                }, 3000);
+            } else {
+                alert('Please enter a valid URL');
+            }
+        }
+
+        // Utility functions
+        function showLoadingOverlay(message = 'Loading...') {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.id = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+
+        // Handle responsive sidebar
+        window.addEventListener('resize', function() {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('show');
+                document.getElementById('main-content').classList.remove('sidebar-open');
+                sidebarOpen = false;
+            }
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768 && sidebarOpen) {
+                const sidebar = document.getElementById('sidebar');
+                const toggleBtn = document.querySelector('[onclick="toggleSidebar()"]');
+                
+                if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                    sidebar.classList.remove('show');
+                    document.getElementById('main-content').classList.remove('sidebar-open');
+                    sidebarOpen = false;
+                }
+            }
+        });
+
+        // Form validation and submission handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle all form submissions
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Basic form validation
+                    const requiredFields = form.querySelectorAll('[required]');
+                    let isValid = true;
+                    
+                    requiredFields.forEach(field => {
+                        if (!field.value.trim()) {
+                            field.classList.add('is-invalid');
+                            isValid = false;
+                        } else {
+                            field.classList.remove('is-invalid');
+                        }
+                    });
+                    
+                    if (isValid) {
+                        // Handle different form types
+                        if (form.id === 'login-form') {
+                            login();
+                        } else {
+                            showLoadingOverlay('Processing...');
+                            setTimeout(() => {
+                                hideLoadingOverlay();
+                                alert('Form submitted successfully!');
+                                form.reset();
+                            }, 1500);
+                        }
+                    } else {
+                        alert('Please fill in all required fields.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
